@@ -28,6 +28,8 @@ class ChunkingStrategy(StrEnum):
     ROW = "row"
     SECTION = "section"
     FAQ = "faq"
+    SEMANTIC = "semantic"
+    LLM = "llm"
 
 
 class SourceLocation(CorpusModel):
