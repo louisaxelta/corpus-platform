@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "corpus-api"
+version = "0.1.0a0"
+description = "Versioned HTTP API composition layer for Corpus."
+authors = [
+    { name = "Louis Axel", email = "louisaxel.tjokroatmodjo@gmail.com" },
+]
+requires-python = ">=3.11"
+dependencies = [
+    "corpus-agent",
+    "corpus-engine",
+    "fastapi>=0.116",
+    "python-multipart>=0.0.20",
+    "uvicorn>=0.35",
+]
+
+[tool.uv.sources]
+corpus-engine = { workspace = true }
+corpus-agent = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/corpus_api"]

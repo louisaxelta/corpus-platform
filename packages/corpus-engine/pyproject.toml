@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "corpus-engine"
+version = "0.1.0a0"
+description = "Provider-neutral document intelligence engine."
+authors = [
+    { name = "Louis Axel", email = "louisaxel.tjokroatmodjo@gmail.com" },
+]
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["documents", "ingestion", "retrieval", "rag"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.11,<3",
+]
+
+[project.scripts]
+corpus-engine = "corpus_engine.interfaces.cli:main"
+
+[project.optional-dependencies]
+parsers = [
+    "markdown-it-py>=4,<5",
+    "openpyxl>=3.1,<4",
+    "pypdf>=6,<7",
+    "python-docx>=1.2,<2",
+    "python-pptx>=1.0,<2",
+]
+server = [
+    "fastapi>=0.116,<1",
+    "python-multipart>=0.0.20,<1",
+    "uvicorn[standard]>=0.35,<1",
+]
+litellm = [
+    "litellm>=1.75,<2",
+]
+aws = [
+    "boto3>=1.40,<2",
+]
+gcp = [
+    "google-cloud-storage>=3.3,<4",
+]
+azure = [
+    "azure-storage-blob>=12.26,<13",
+]
+qdrant = [
+    "qdrant-client>=1.15,<2",
+]
+pgvector = [
+    "pgvector>=0.4,<1",
+    "psycopg[binary,pool]>=3.2,<4",
+]
+observability = [
+    "opentelemetry-api>=1.36,<2",
+    "opentelemetry-sdk>=1.36,<2",
+]
+all = [
+    "azure-storage-blob>=12.26,<13",
+    "boto3>=1.40,<2",
+    "fastapi>=0.116,<1",
+    "google-cloud-storage>=3.3,<4",
+    "litellm>=1.75,<2",
+    "markdown-it-py>=4,<5",
+    "openpyxl>=3.1,<4",
+    "opentelemetry-api>=1.36,<2",
+    "opentelemetry-sdk>=1.36,<2",
+    "pgvector>=0.4,<1",
+    "psycopg[binary,pool]>=3.2,<4",
+    "pypdf>=6,<7",
+    "python-docx>=1.2,<2",
+    "python-multipart>=0.0.20,<1",
+    "python-pptx>=1.0,<2",
+    "qdrant-client>=1.15,<2",
+    "uvicorn[standard]>=0.35,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/corpus_engine"]

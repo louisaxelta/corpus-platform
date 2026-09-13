@@ -1,0 +1,45 @@
+[project]
+name = "corpus-platform"
+version = "0.0.0"
+description = "Development workspace for the Corpus document intelligence platform."
+authors = [
+    { name = "Louis Axel", email = "louisaxel.tjokroatmodjo@gmail.com" },
+]
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+    "apps/api",
+    "packages/corpus-engine",
+    "packages/corpus-agent",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17",
+    "pytest>=8.4",
+    "ruff>=0.12",
+]
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+testpaths = [
+    "apps/api/tests",
+    "packages/corpus-engine/tests",
+    "packages/corpus-agent/tests",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

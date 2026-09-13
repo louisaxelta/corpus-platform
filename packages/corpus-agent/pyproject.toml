@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "corpus-agent"
+version = "0.1.0a0"
+description = "Provider-independent ingestion planning agent for Corpus."
+authors = [
+    { name = "Louis Axel", email = "louisaxel.tjokroatmodjo@gmail.com" },
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "corpus-engine",
+]
+
+[project.optional-dependencies]
+litellm = ["litellm>=1.75"]
+instructor = ["instructor>=1.10"]
+langgraph = ["langgraph>=0.6"]
+
+[tool.uv.sources]
+corpus-engine = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/corpus_agent"]
