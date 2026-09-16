@@ -58,6 +58,21 @@ corpus-engine guide.md --preview-limit 5
 python -m corpus_engine guide.md --preview-limit 5
 ```
 
+LLM chunking is an optional adapter. Install it, configure any LiteLLM-supported
+model, and select the `llm` strategy:
+
+```shell
+pip install "corpus-engine[litellm]"
+corpus-engine guide.md --strategy llm --chunk-size 1000
+```
+
+Copy the repository's `.env.example` to `.env`, then set `CORPUS_LLM_MODEL` and
+the API key expected by your provider. Corpus automatically reads this file from
+the working directory.
+
+`CORPUS_LLM_API_BASE` is optional. The legacy `OPENROUTER_LLM_MODEL`,
+`OPENROUTER_API_KEY`, and `OPENROUTER_API_URL` names remain supported.
+
 The optional FastAPI router is available with the `server` extra:
 
 ```python

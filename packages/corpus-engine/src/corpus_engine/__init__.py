@@ -1,6 +1,7 @@
 """Provider-neutral document intelligence engine."""
 
 from corpus_engine.application.engine import CorpusEngine
+from corpus_engine.config import Config, get_config
 from corpus_engine.domain.models import (
     Chunk,
     ChunkerConfig,
@@ -15,7 +16,11 @@ from corpus_engine.domain.models import (
     ProcessingResult,
     SourceLocation,
 )
-from corpus_engine.ingestion.chunkers import DEFAULT_CHUNKERS, ChunkerRegistry
+from corpus_engine.ingestion.chunkers import (
+    DEFAULT_CHUNKERS,
+    ChunkerRegistry,
+    create_llm_chunker,
+)
 from corpus_engine.ingestion.parsers import DEFAULT_PARSERS, ParserRegistry
 
 __version__ = "0.1.0a0"
@@ -27,6 +32,7 @@ __all__ = [
     "ChunkerConfig",
     "ChunkerRegistry",
     "ChunkingStrategy",
+    "Config",
     "CorpusEngine",
     "Document",
     "DocumentElement",
@@ -38,4 +44,6 @@ __all__ = [
     "ParserRegistry",
     "ProcessingResult",
     "SourceLocation",
+    "create_llm_chunker",
+    "get_config",
 ]

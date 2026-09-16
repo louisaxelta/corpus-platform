@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "pydantic>=2.11,<3",
+    "pydantic-settings>=2.10,<3",
 ]
 
 [project.scripts]
@@ -42,6 +43,7 @@ server = [
     "uvicorn[standard]>=0.35,<1",
 ]
 litellm = [
+    "instructor>=1.7,<2",
     "litellm>=1.75,<2",
 ]
 aws = [
@@ -69,6 +71,7 @@ all = [
     "boto3>=1.40,<2",
     "fastapi>=0.116,<1",
     "google-cloud-storage>=3.3,<4",
+    "instructor>=1.7,<2",
     "litellm>=1.75,<2",
     "markdown-it-py>=4,<5",
     "openpyxl>=3.1,<4",
