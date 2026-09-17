@@ -7,8 +7,10 @@ from corpus_engine import (
     Document,
     DocumentSource,
     ElementKind,
+    create_llm_chunker,
 )
 from corpus_engine.domain.errors import UnsupportedFormatError
+from corpus_engine.llm.schemas import SemanticChunkGroup, SemanticChunkGroups
 from pydantic import ValidationError
 
 
@@ -81,3 +83,84 @@ def test_semantic_strategy_is_not_claimed_without_an_adapter() -> None:
     capabilities = DEFAULT_CHUNKERS.capabilities()
 
     assert "semantic" not in capabilities
+    assert "llm" in capabilities
+
+
+def test_llm_chunker_groups_sentences_and_preserves_provenance() -> None:
+    document_source = source("notes.txt")
+    elements = DEFAULT_PARSERS.create_for("notes.txt").parse(
+        (
+            b"Authentication starts here. Coffee is unrelated. "
+            b"Authentication continues here."
+        ),
+        document_source,
+    )
+    document = Document(
+        id=document_source.id,
+        source=document_source,
+        elements=tuple(elements),
+    )
+
+    def invoke(
+        prompt: str,
+        response_model: type[SemanticChunkGroups],
+        max_tokens: int | None,
+    ) -> SemanticChunkGroups:
+        assert "[0] Authentication starts here." in prompt
+        assert max_tokens == 16384
+        return response_model(
+            groups=[
+                SemanticChunkGroup(indices=[0, 2]),
+                SemanticChunkGroup(indices=[1]),
+            ],
+        )
+
+    chunks = create_llm_chunker(invoke)(
+        document,
+        ChunkerConfig(strategy=ChunkingStrategy.LLM, chunk_size=100),
+    )
+
+    assert [chunk.content for chunk in chunks] == [
+        "Authentication starts here. Authentication continues here.",
+        "Coffee is unrelated.",
+    ]
+    assert chunks[0].metadata["element_ids"] == [elements[0].id]
+    assert chunks[0].metadata["sentence_indices"] == [0, 2]
+
+
+def test_llm_chunker_splits_one_topic_at_the_size_limit() -> None:
+    document_source = source("notes.txt")
+    elements = DEFAULT_PARSERS.create_for("notes.txt").parse(
+        b"First topic sentence. Second topic sentence.",
+        document_source,
+    )
+    document = Document(
+        id=document_source.id,
+        source=document_source,
+        elements=tuple(elements),
+    )
+
+    def invoke(
+        prompt: str,
+        response_model: type[SemanticChunkGroups],
+        max_tokens: int | None,
+    ) -> SemanticChunkGroups:
+        return response_model(
+            groups=[SemanticChunkGroup(indices=[0, 1])],
+        )
+
+    chunks = create_llm_chunker(invoke)(
+        document,
+        ChunkerConfig(
+            strategy=ChunkingStrategy.LLM,
+            chunk_size=25,
+            chunk_overlap=0,
+        ),
+    )
+
+    assert [chunk.content for chunk in chunks] == [
+        "First topic sentence.",
+        "Second topic sentence.",
+    ]
+    assert [chunk.metadata["topic_group"] for chunk in chunks] == [0, 0]
+    assert [chunk.metadata["topic_part"] for chunk in chunks] == [0, 1]

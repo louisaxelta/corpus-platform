@@ -13,7 +13,7 @@
 - Chunker behavior: redesigned and ported to `corpus_engine.ingestion.chunkers`
 - Legacy models: replaced by versioned, immutable domain models
 - AWS clients and AWS-bound workflow: rejected from the engine core
-- LLM semantic chunking: deferred to an optional adapter
+- LLM chunking: redesigned as an optional, provider-neutral LiteLLM adapter
 - API and application configuration: not migrated into the engine
 
 Corrections made during the port include native text and Markdown parsers, removal of

@@ -644,6 +644,7 @@ version = "0.1.0a0"
 source = { editable = "packages/corpus-engine" }
 dependencies = [
     { name = "pydantic" },
+    { name = "pydantic-settings" },
 ]
 
 [package.optional-dependencies]
@@ -652,6 +653,7 @@ all = [
     { name = "boto3" },
     { name = "fastapi" },
     { name = "google-cloud-storage" },
+    { name = "instructor" },
     { name = "litellm" },
     { name = "markdown-it-py" },
     { name = "openpyxl" },
@@ -676,6 +678,7 @@ gcp = [
     { name = "google-cloud-storage" },
 ]
 litellm = [
+    { name = "instructor" },
     { name = "litellm" },
 ]
 observability = [
@@ -712,6 +715,8 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.116,<1" },
     { name = "google-cloud-storage", marker = "extra == 'all'", specifier = ">=3.3,<4" },
     { name = "google-cloud-storage", marker = "extra == 'gcp'", specifier = ">=3.3,<4" },
+    { name = "instructor", marker = "extra == 'all'", specifier = ">=1.7,<2" },
+    { name = "instructor", marker = "extra == 'litellm'", specifier = ">=1.7,<2" },
     { name = "litellm", marker = "extra == 'all'", specifier = ">=1.75,<2" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.75,<2" },
     { name = "markdown-it-py", marker = "extra == 'all'", specifier = ">=4,<5" },
@@ -727,6 +732,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary", "pool"], marker = "extra == 'all'", specifier = ">=3.2,<4" },
     { name = "psycopg", extras = ["binary", "pool"], marker = "extra == 'pgvector'", specifier = ">=3.2,<4" },
     { name = "pydantic", specifier = ">=2.11,<3" },
+    { name = "pydantic-settings", specifier = ">=2.10,<3" },
     { name = "pypdf", marker = "extra == 'all'", specifier = ">=6,<7" },
     { name = "pypdf", marker = "extra == 'parsers'", specifier = ">=6,<7" },
     { name = "python-docx", marker = "extra == 'all'", specifier = ">=1.2,<2" },
