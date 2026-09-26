@@ -69,6 +69,12 @@ class ChunkerConfig(CorpusModel):
     chunk_size: int = Field(default=512, ge=1)
     chunk_overlap: int = Field(default=50, ge=0)
     group_by: str | None = None
+    semantic_similarity_threshold: float = Field(
+        default=0.75,
+        ge=-1.0,
+        le=1.0,
+        description="Minimum adjacent-sentence cosine similarity for semantic merging",
+    )
 
     @model_validator(mode="after")
     def overlap_must_be_smaller_than_size(self) -> ChunkerConfig:

@@ -25,12 +25,17 @@ def test_llm_config_is_loaded_from_environment(monkeypatch: MonkeyPatch) -> None
     get_config.cache_clear()
 
 
-def test_legacy_openrouter_model_gets_provider_prefix(
+def test_embedder_config_reuses_llm_credentials(
     monkeypatch: MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("CORPUS_LLM_MODEL", "")
-    monkeypatch.setenv("OPENROUTER_LLM_MODEL", "anthropic/example-model")
+    monkeypatch.setenv("CORPUS_EMBEDDER_MODEL", "qwen/qwen3-embedding-8b")
+    monkeypatch.setenv("CORPUS_LLM_API_KEY", "shared-key")
+    monkeypatch.setenv("CORPUS_LLM_API_BASE", "https://openrouter.test/api/v1/")
     get_config.cache_clear()
 
-    assert get_config().llm_model == "openrouter/anthropic/example-model"
+    config = get_config()
+
+    assert config.embedder_model == "openrouter/qwen/qwen3-embedding-8b"
+    assert config.llm_api_key == "shared-key"
+    assert config.llm_api_base == "https://openrouter.test/api/v1"
     get_config.cache_clear()

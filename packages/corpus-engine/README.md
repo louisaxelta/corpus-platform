@@ -70,8 +70,47 @@ Copy the repository's `.env.example` to `.env`, then set `CORPUS_LLM_MODEL` and
 the API key expected by your provider. Corpus automatically reads this file from
 the working directory.
 
-`CORPUS_LLM_API_BASE` is optional. The legacy `OPENROUTER_LLM_MODEL`,
-`OPENROUTER_API_KEY`, and `OPENROUTER_API_URL` names remain supported.
+`CORPUS_LLM_API_BASE` is optional.
+
+## Semantic chunking
+
+Semantic chunking is provider- and model-agnostic. Supply any implementation of
+the `Embedder` protocol when creating the chunker registry:
+
+```python
+from corpus_engine import (
+    ChunkerConfig,
+    ChunkingStrategy,
+    CorpusEngine,
+    create_default_chunker_registry,
+)
+
+registry = create_default_chunker_registry(embedder=my_embedder)
+engine = CorpusEngine(chunkers=registry)
+result = engine.process_file(
+    "guide.md",
+    chunking=ChunkerConfig(
+        strategy=ChunkingStrategy.SEMANTIC,
+        semantic_similarity_threshold=0.75,
+    ),
+)
+```
+
+The embedder must return one non-zero, finite vector per sentence, with dimensions
+matching its `dimensions` property. Chunk boundaries depend on the selected model,
+so applications should record the model identity in their ingestion metadata when
+reproducibility matters. The default registry does not advertise `semantic` until
+an embedder is supplied.
+
+The CLI configures a LiteLLM embedder when `semantic` is selected:
+
+```shell
+corpus-engine guide.pdf --strategy semantic --semantic-threshold 0.75
+```
+
+Set `CORPUS_EMBEDDER_MODEL`; the adapter reuses `CORPUS_LLM_API_KEY` and
+`CORPUS_LLM_API_BASE`. Unprefixed embedding model names are routed through
+OpenRouter.
 
 The optional FastAPI router is available with the `server` extra:
 
