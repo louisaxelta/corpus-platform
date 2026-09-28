@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from collections.abc import Callable
 
@@ -14,6 +15,7 @@ from corpus_engine.domain.models import (
     Document,
     DocumentElement,
 )
+from corpus_engine.domain.protocols import Embedder
 from corpus_engine.llm.schemas import SemanticChunkGroups
 
 ChunkingFunction = Callable[[Document, ChunkerConfig], list[Chunk]]
@@ -181,7 +183,7 @@ def faq_chunks(document: Document, config: ChunkerConfig) -> list[Chunk]:
     return chunks
 
 
-def _llm_text(element: DocumentElement) -> str:
+def _chunkable_text(element: DocumentElement) -> str:
     if not isinstance(element.content, dict):
         return element.content
     heading = element.content.get("heading") or element.content.get("title")
@@ -191,19 +193,132 @@ def _llm_text(element: DocumentElement) -> str:
     return _content_text(element)
 
 
-def _llm_chunks_with(
-    document: Document,
-    config: ChunkerConfig,
-    invoke: LLMGroupingInvoker,
-) -> list[Chunk]:
+def _sentence_units(document: Document) -> list[tuple[str, DocumentElement]]:
     units: list[tuple[str, DocumentElement]] = []
     for element in document.elements:
-        sentences = re.split(r"(?<=[.!?])\s+", _llm_text(element))
+        sentences = re.split(r"(?<=[.!?])\s+", _chunkable_text(element))
         units.extend(
             (sentence.strip(), element)
             for sentence in sentences
             if sentence.strip()
         )
+    return units
+
+
+def _validated_embeddings(
+    embedder: Embedder,
+    texts: list[str],
+) -> list[list[float]]:
+    embeddings = embedder.embed(texts)
+    if len(embeddings) != len(texts):
+        raise ValueError(
+            "Semantic embedder must return exactly one vector per sentence; "
+            f"expected {len(texts)}, received {len(embeddings)}",
+        )
+
+    dimensions = embedder.dimensions
+    if dimensions < 1:
+        raise ValueError("Semantic embedder dimensions must be greater than zero")
+
+    for index, vector in enumerate(embeddings):
+        if len(vector) != dimensions:
+            raise ValueError(
+                "Semantic embedder returned an inconsistent vector dimension; "
+                f"sentence {index} expected {dimensions}, received {len(vector)}",
+            )
+        if not all(math.isfinite(value) for value in vector):
+            raise ValueError(
+                f"Semantic embedder returned a non-finite value for sentence {index}",
+            )
+        if math.sqrt(sum(value * value for value in vector)) == 0:
+            raise ValueError(
+                f"Semantic embedder returned a zero vector for sentence {index}",
+            )
+    return embeddings
+
+
+def _cosine_similarity(left: list[float], right: list[float]) -> float:
+    dot_product = sum(left_value * right_value for left_value, right_value in zip(left, right))
+    left_norm = math.sqrt(sum(value * value for value in left))
+    right_norm = math.sqrt(sum(value * value for value in right))
+    return dot_product / (left_norm * right_norm)
+
+
+def create_semantic_chunker(embedder: Embedder) -> ChunkingFunction:
+    """Create an order-preserving semantic chunker with an injected embedder."""
+
+    def chunk(document: Document, config: ChunkerConfig) -> list[Chunk]:
+        units = _sentence_units(document)
+        if not units:
+            return []
+
+        embeddings = _validated_embeddings(
+            embedder,
+            [sentence for sentence, _ in units],
+        )
+        groups: list[tuple[list[int], list[float]]] = []
+        current_indices = [0]
+        current_similarities: list[float] = []
+        current_text = units[0][0]
+
+        for index in range(1, len(units)):
+            sentence = units[index][0]
+            similarity = _cosine_similarity(embeddings[index - 1], embeddings[index])
+            candidate = f"{current_text} {sentence}"
+            if (
+                similarity >= config.semantic_similarity_threshold
+                and len(candidate) <= config.chunk_size
+            ):
+                current_indices.append(index)
+                current_similarities.append(similarity)
+                current_text = candidate
+                continue
+
+            groups.append((current_indices, current_similarities))
+            current_indices = [index]
+            current_similarities = []
+            current_text = sentence
+        groups.append((current_indices, current_similarities))
+
+        chunks: list[Chunk] = []
+        for group_number, (indices, similarities) in enumerate(groups):
+            text = " ".join(units[index][0] for index in indices)
+            parts = _windows(text, config.chunk_size, 0)
+            element_ids = list(
+                dict.fromkeys(units[index][1].id for index in indices),
+            )
+            first_element = units[indices[0]][1]
+            for part_number, part in enumerate(parts):
+                chunks.append(
+                    _make_chunk(
+                        document,
+                        first_element,
+                        part,
+                        len(chunks),
+                        {
+                            "element_ids": element_ids,
+                            "sentence_indices": indices,
+                            "strategy": ChunkingStrategy.SEMANTIC.value,
+                            "semantic_group": group_number,
+                            "semantic_part": part_number,
+                            "similarities": similarities,
+                            "similarity_threshold": (
+                                config.semantic_similarity_threshold
+                            ),
+                        },
+                    ),
+                )
+        return chunks
+
+    return chunk
+
+
+def _llm_chunks_with(
+    document: Document,
+    config: ChunkerConfig,
+    invoke: LLMGroupingInvoker,
+) -> list[Chunk]:
+    units = _sentence_units(document)
     if not units:
         return []
 
@@ -316,11 +431,25 @@ class ChunkerRegistry:
         return tuple(sorted(self._strategies, key=str))
 
 
-DEFAULT_CHUNKERS = ChunkerRegistry()
-DEFAULT_CHUNKERS.register(ChunkingStrategy.FIXED, fixed_chunks)
-DEFAULT_CHUNKERS.register(ChunkingStrategy.RECURSIVE, recursive_chunks)
-DEFAULT_CHUNKERS.register(ChunkingStrategy.SLIDING_WINDOW, sliding_window_chunks)
-DEFAULT_CHUNKERS.register(ChunkingStrategy.ROW, row_chunks)
-DEFAULT_CHUNKERS.register(ChunkingStrategy.SECTION, section_chunks)
-DEFAULT_CHUNKERS.register(ChunkingStrategy.FAQ, faq_chunks)
-DEFAULT_CHUNKERS.register(ChunkingStrategy.LLM, llm_chunks)
+def create_default_chunker_registry(
+    *,
+    embedder: Embedder | None = None,
+) -> ChunkerRegistry:
+    """Create the built-in registry, optionally enabling semantic chunking."""
+    registry = ChunkerRegistry()
+    registry.register(ChunkingStrategy.FIXED, fixed_chunks)
+    registry.register(ChunkingStrategy.RECURSIVE, recursive_chunks)
+    registry.register(ChunkingStrategy.SLIDING_WINDOW, sliding_window_chunks)
+    registry.register(ChunkingStrategy.ROW, row_chunks)
+    registry.register(ChunkingStrategy.SECTION, section_chunks)
+    registry.register(ChunkingStrategy.FAQ, faq_chunks)
+    registry.register(ChunkingStrategy.LLM, llm_chunks)
+    if embedder is not None:
+        registry.register(
+            ChunkingStrategy.SEMANTIC,
+            create_semantic_chunker(embedder),
+        )
+    return registry
+
+
+DEFAULT_CHUNKERS = create_default_chunker_registry()
